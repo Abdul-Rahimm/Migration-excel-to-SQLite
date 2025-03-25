@@ -1,115 +1,36 @@
-import inquirer from "inquirer";
 import sqlite3 from "sqlite3";
-import xlsx from "xlsx";
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
+import {
+  selectFile,
+  selectTable,
+  getColumns,
+  readExcel,
+  insertData,
+} from "./dbUtils.js";
 
-// Enable verbose mode for SQLite
+// --------------------------------------------------------------------------------------------------------------------------------------------------------
+// The code below is a simple script that reads an Excel file and migrates the data to an SQLite database.
+// It uses the sqlite3 module to interact with the SQLite database and the exceljs module to read the Excel file.
+
+// The script contains the following functions:
+
+// selectFile : Opens a file dialog to select a file.
+// selectTable : Prompts the user to select a table from the database.
+// getColumns : Retrieves the columns of a table from the database.
+// readExcel : Reads an Excel file and returns the data as an array of objects.
+// insertData : Inserts data into a table in the database.
+
+// The  migrateData function is the main function that orchestrates the migration process.
+// It first prompts the user to select an Excel file and a database file.
+// Then, it asks the user to select a table from the database.
+// It reads the Excel file and retrieves the columns of the selected table from the database.
+// If the columns in the Excel file match the columns in the database table, it inserts the data into the table.
+// Finally, it closes the database connection.
+
+// To run the script, save it as  migrate.js  and execute it using Node.js:
+// node migrate.js --> write this command in terminal
+// --------------------------------------------------------------------------------------------------------------------------------------------------------
+
 const sqlite = sqlite3.verbose();
-
-// Function to browse and select a file
-async function selectFile(fileType, extensions) {
-  const answers = await inquirer.prompt([
-    {
-      type: "input",
-      name: "filePath",
-      message: `Select your ${fileType} file:`,
-      validate: (input) =>
-        fs.existsSync(input) && extensions.some((ext) => input.endsWith(ext))
-          ? true
-          : `File not found or invalid format! Allowed: ${extensions.join(
-              ", "
-            )}`,
-    },
-  ]);
-  return answers.filePath;
-}
-
-// Function to select a table from the database
-async function selectTable(db) {
-  const allTables = await getTables(db);
-  if (allTables.length === 0)
-    throw new Error("No tables found in the database.");
-
-  const answers = await inquirer.prompt([
-    {
-      type: "list",
-      name: "table",
-      message: "Select the table to insert data:",
-      choices: allTables,
-    },
-  ]);
-
-  return answers.table;
-}
-
-// Function to get tables from the database
-async function getTables(db) {
-  return new Promise((resolve, reject) => {
-    db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows.map((row) => row.name));
-    });
-  });
-}
-
-// Function to get column names from a table
-async function getColumns(db, table) {
-  return new Promise((resolve, reject) => {
-    db.all(`PRAGMA table_info(${table})`, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows.map((row) => row.name));
-    });
-  });
-}
-
-// Function to read Excel data
-function readExcel(filePath) {
-  const workbook = xlsx.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  return xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-}
-
-async function insertData(db, table, columns, data) {
-  const placeholders = columns.map(() => "?").join(",");
-  const query = `INSERT INTO ${table} (${columns.join(
-    ","
-  )}) VALUES (${placeholders})`;
-
-  try {
-    // Prepare statement
-    const stmt = await new Promise((resolve, reject) => {
-      db.prepare(query, function (err) {
-        if (err) reject(err);
-        else resolve(this);
-      });
-    });
-
-    // Insert each row
-    for (const row of data) {
-      const values = columns.map((col) => row[col]);
-      await new Promise((resolve, reject) => {
-        stmt.run(values, function (err) {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    }
-
-    // Finalize statement
-    await new Promise((resolve, reject) => {
-      stmt.finalize((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    console.log("Data inserted successfully.");
-  } catch (err) {
-    console.error("Error inserting data:", err.message);
-  }
-}
 
 // Main function
 async function migrateData() {
@@ -120,7 +41,7 @@ async function migrateData() {
     const dbPath = await selectFile("SQLite Database", [".db"]);
     console.log(`Selected Database File: ${dbPath}`);
 
-    const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
+    const db = new sqlite.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
       if (err) {
         console.error("Error opening database:", err.message);
         return;
@@ -153,5 +74,4 @@ async function migrateData() {
   }
 }
 
-// Run the migration
 migrateData();

@@ -6,14 +6,32 @@ import inquirer from "inquirer";
 
 // Enable verbose mode for SQLite
 const sqlite = sqlite3.verbose();
+const CONFIG_FILE = "config.json"; // File to store last used paths
 
-// Function to browse and select a file
-export async function selectFile(fileType, extensions) {
+// Load last used paths
+function loadConfig() {
+  if (fs.existsSync(CONFIG_FILE)) {
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+  }
+  return {};
+}
+
+// Save last used paths
+function saveConfig(data) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2));
+}
+
+// Function to browse and select a file with prefilled last used path
+export async function selectFile(fileType, extensions, key) {
+  const config = loadConfig();
+  const defaultPath = config[key] || "";
+
   const answers = await inquirer.prompt([
     {
       type: "input",
       name: "filePath",
       message: `Select your ${fileType} file:`,
+      default: defaultPath, // Prefill with last used path
       validate: (input) =>
         fs.existsSync(input) && extensions.some((ext) => input.endsWith(ext))
           ? true
@@ -22,6 +40,11 @@ export async function selectFile(fileType, extensions) {
             )}`,
     },
   ]);
+
+  // Save selected path
+  config[key] = answers.filePath;
+  saveConfig(config);
+
   return answers.filePath;
 }
 

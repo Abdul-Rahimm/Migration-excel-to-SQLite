@@ -35,10 +35,14 @@ const sqlite = sqlite3.verbose();
 // Main function
 async function migrateData() {
   try {
-    const excelFilePath = await selectFile("Excel", [".xlsx", ".xls"]);
+    const excelFilePath = await selectFile(
+      "Excel",
+      [".xlsx", ".xls"],
+      "lastExcelPath"
+    );
     console.log(`Selected Excel File: ${excelFilePath}`);
 
-    const dbPath = await selectFile("SQLite Database", [".db"]);
+    const dbPath = await selectFile("SQLite Database", [".db"], "lastDbPath");
     console.log(`Selected Database File: ${dbPath}`);
 
     const db = new sqlite.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {

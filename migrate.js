@@ -60,13 +60,32 @@ async function migrateData() {
     const excelColumns = Object.keys(excelData[0]);
     console.log(`Excel Columns: ${excelColumns.join(", ")}`);
 
-    // Check if columns match
-    if (!excelColumns.every((col) => dbColumns.includes(col))) {
-      throw new Error("Excel columns do not match database table columns!");
+    // case insensitive mapping
+    const dbColumnsLower = dbColumns.map((col) => col.toLowerCase());
+    const columnMapping = {};
+
+    // Create a mapping of Excel columns to DB columns
+    for (const excelCol of excelColumns) {
+      const matchIndex = dbColumnsLower.indexOf(excelCol.toLowerCase());
+      if (matchIndex !== -1) {
+        columnMapping[excelCol] = dbColumns[matchIndex];
+      } else {
+        throw new Error(`Column "${excelCol}" not found in the database.`);
+      }
     }
 
+    // Use mapped column names for insertion
+    const mappedColumns = Object.values(columnMapping);
+    const mappedData = excelData.map((row) => {
+      const newRow = {};
+      for (const [excelCol, dbCol] of Object.entries(columnMapping)) {
+        newRow[dbCol] = row[excelCol];
+      }
+      return newRow;
+    });
+
     // Insert data
-    await insertData(db, table, excelColumns, excelData);
+    await insertData(db, table, mappedColumns, mappedData);
 
     db.close();
   } catch (error) {

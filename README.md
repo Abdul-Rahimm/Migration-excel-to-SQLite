@@ -1,7 +1,3 @@
-Absolutely! Here's a detailed `README.md` file you can use for your **Excel-to-SQLite Migration Utility** project:
-
----
-
 # 📊 Excel to SQLite Migration Utility
 
 This Node.js utility allows users to **easily migrate data from an Excel sheet to a SQLite database table** with a guided CLI experience. It handles data validation, provides file-picking via CLI prompts, and even remembers your previously selected files to improve usability.
